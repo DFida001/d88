@@ -11,14 +11,6 @@ export default defineConfig({
         target: process.env.VITE_API_BASE_URL || "http://localhost:3000",
         changeOrigin: true,
       },
-      "/login": {
-        target: process.env.VITE_API_BASE_URL || "http://localhost:3000",
-        changeOrigin: true,
-      },
-      "/register": {
-        target: process.env.VITE_API_BASE_URL || "http://localhost:3000",
-        changeOrigin: true,
-      },
     },
   },
   build: {
