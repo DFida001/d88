@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
 
 const app = express();
 
@@ -29,6 +30,25 @@ app.use(cors());
 app.use(express.json());
 
 // Mongoose Schemas
+const userSchema = new mongoose.Schema({
+  username: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true,
+    minlength: 3,
+  },
+  password: {
+    type: String,
+    required: true,
+    minlength: 6,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
 const summaryChartSchema = new mongoose.Schema({
   name: { type: String, required: true },
   value: { type: Number, required: true },
@@ -39,25 +59,113 @@ const reportsChartSchema = new mongoose.Schema({
   value: { type: Number, required: true },
 });
 
+const User = mongoose.model("User", userSchema);
 const SummaryChart = mongoose.model("SummaryChart", summaryChartSchema);
 const ReportsChart = mongoose.model("ReportsChart", reportsChartSchema);
 
-// Hardcoded User
-const USER = {
-  username: "theDemoUser",
-  password: "GitHub",
-};
+// Registration Route
+app.post("/register", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    // Validation
+    if (!username || !password) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    if (username.length < 3) {
+      return res
+        .status(400)
+        .json({ message: "Username must be at least 3 characters" });
+    }
+
+    if (password.length < 6) {
+      return res
+        .status(400)
+        .json({ message: "Password must be at least 6 characters" });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      return res.status(400).json({ message: "Username already exists" });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create new user
+    const newUser = new User({
+      username,
+      password: hashedPassword,
+    });
+
+    await newUser.save();
+
+    // Generate token
+    const token = jwt.sign(
+      { userId: newUser._id, username: newUser.username },
+      SECRET_KEY,
+      { expiresIn: JWT_EXPIRATION }
+    );
+
+    res.status(201).json({
+      message: "User registered successfully",
+      token,
+      user: {
+        id: newUser._id,
+        username: newUser.username,
+      },
+    });
+  } catch (error) {
+    console.error("Registration error:", error);
+    res.status(500).json({ message: "Server error during registration" });
+  }
+});
 
 // Login Route
-app.post("/login", (req, res) => {
-  const { username, password } = req.body;
-  if (username === USER.username && password === USER.password) {
-    const token = jwt.sign({ username }, SECRET_KEY, {
-      expiresIn: JWT_EXPIRATION,
+app.post("/login", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    // Validation
+    if (!username || !password) {
+      return res
+        .status(400)
+        .json({ message: "Username and password are required" });
+    }
+
+    // Find user
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    // Check password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    // Generate token
+    const token = jwt.sign(
+      { userId: user._id, username: user.username },
+      SECRET_KEY,
+      { expiresIn: JWT_EXPIRATION }
+    );
+
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+      },
     });
-    return res.json({ token });
+  } catch (error) {
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Server error during login" });
   }
-  res.status(401).json({ message: "Invalid credentials" });
 });
 
 // Middleware to verify JWT

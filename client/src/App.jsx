@@ -6,6 +6,7 @@ import {
   Navigate,
 } from "react-router-dom";
 import Login from "./components/Login";
+import Register from "./components/Register";
 import Dashboard from "./components/Dashboard";
 import Summary from "./components/Summary";
 import Reports from "./components/Reports";
@@ -23,6 +24,10 @@ function App() {
         <Route
           path="/login"
           element={!user ? <Login /> : <Navigate to="/dashboard" />}
+        />
+        <Route
+          path="/register"
+          element={!user ? <Register /> : <Navigate to="/dashboard" />}
         />
         <Route
           path="/dashboard"

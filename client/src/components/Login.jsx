@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 const Login = () => {
   const [username, setUsername] = useState("");
@@ -46,7 +46,15 @@ const Login = () => {
         {error && <p className="error">{error}</p>}
         <button type="submit">Login</button>
       </form>
-      <p>Hint: Use "GitHub" for both username and password.</p>
+      <p style={{ marginTop: "1rem", textAlign: "center" }}>
+        Don't have an account?{" "}
+        <Link
+          to="/register"
+          style={{ color: "#00703C", textDecoration: "none" }}
+        >
+          Register here
+        </Link>
+      </p>
     </div>
   );
 };
